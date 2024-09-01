@@ -1,0 +1,191 @@
+#!/usr/bin/python
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# flake8: noqa E501
+
+import requests
+import argparse
+import re
+import os
+
+GITHUB_GRAPHQL_URL = 'https://api.github.com/graphql'
+
+
+def usage():
+    print("""
+Usage:
+  Retrieve unresolved review comments:
+    ./create-issue-from-pull-request "https://github.com/owner/repo/pull/number" [--github-token your_token_here] [--comment-limit limit]
+
+  Create a GitHub issue with unresolved comments:
+    ./create-issue-from-pull-request "https://github.com/owner/repo/pull/number" --create-issue --github-token your_token_here --comment-limit limit
+
+  Using environment variables for the token:
+    export GITHUB_TOKEN=your_token_here
+    ./create-issue-from-pull-request "https://github.com/owner/repo/pull/number" --create-issue
+
+  Note: If you do not provide a token, you may hit API rate limits quickly.
+""")
+
+
+def parse_github_url(url):
+    match = re.match(r'https://github\.com/([^/]+)/([^/]+)/pull/(\d+)', url)
+    if match:
+        owner, repo, pr_number = match.groups()
+        return owner, repo, int(pr_number)
+    else:
+        raise ValueError("Invalid GitHub URL format. Expected format: https://github.com/owner/repo/pull/number")
+
+
+def fetch_unresolved_comments(owner, repo, pr_number, comment_limit, token=None):
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    if token:
+        headers['Authorization'] = f'bearer {token}'
+
+    query = f'''
+    query FetchReviewComments($owner: String!, $repo: String!, $pr: Int!) {{
+        repository(owner: $owner, name: $repo) {{
+            pullRequest(number: $pr) {{
+                url
+                reviewDecision
+                reviewThreads(first: {comment_limit}) {{
+                    edges {{
+                        node {{
+                            isResolved
+                            isOutdated
+                            isCollapsed
+                            path
+                            comments(first: {comment_limit}) {{
+                                totalCount
+                                nodes {{
+                                    author {{
+                                        login
+                                    }}
+                                    body
+                                    url
+                                    createdAt
+                                    id
+                                }}
+                            }}
+                        }}
+                    }}
+                }}
+            }}
+        }}
+    }}
+    '''
+
+    variables = {
+        'owner': owner,
+        'repo': repo,
+        'pr': pr_number
+    }
+
+    response = requests.post(
+        GITHUB_GRAPHQL_URL,
+        json={'query': query, 'variables': variables},
+        headers=headers
+    )
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"Query failed to run with status code {response.status_code}.\nResponse: {response.text}")
+
+
+def filter_unresolved_comments(data):
+    unresolved_comments = []
+
+    threads = data['data']['repository']['pullRequest']['reviewThreads']['edges']
+    for thread in threads:
+        if not thread['node']['isResolved']:
+            for comment in thread['node']['comments']['nodes']:
+                unresolved_comments.append({
+                    'author': comment['author']['login'],
+                    'body': comment['body'],
+                    'url': comment['url'],
+                    'created_at': comment['createdAt'],
+                    'id': comment['id'],
+                    'file_path': thread['node']['path']
+                })
+
+    return unresolved_comments
+
+
+def create_github_issue(repo, title, body, labels, token):
+    headers = {'Authorization': f'token {token}'}
+    url = f'https://api.github.com/repos/{repo}/issues'
+    issue = {
+        'title': title,
+        'body': body,
+        'labels': labels
+    }
+    response = requests.post(url, headers=headers, json=issue)
+    if response.status_code == 201:
+        print(f"Issue created successfully: {response.json()['html_url']}")
+    else:
+        print(f"Failed to create issue: {response.status_code}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Retrieve unresolved review comments from a GitHub pull request.')
+    parser.add_argument('pr_url', type=str, help='URL of the GitHub Pull Request')
+    parser.add_argument('--github-token', type=str, help='GitHub token for authentication (optional)')
+    parser.add_argument('--create-issue', action='store_true', help='Flag to create an issue on GitHub. Default is to print the comments.')
+    parser.add_argument('--comment-limit', type=int, default=100, help='Number of comments to retrieve per review thread (default: 100)')
+    args = parser.parse_args()
+
+    # Print usage information if no arguments are provided
+    if not args.pr_url:
+        usage()
+        return
+
+    try:
+        owner, repo, pr_number = parse_github_url(args.pr_url)
+    except ValueError as e:
+        print(e)
+        return
+
+    token = args.github_token if args.github_token else os.getenv('GITHUB_TOKEN')
+
+    if not token:
+        print("Warning: You are not using a GitHub token. You may hit API rate limits quickly.")
+
+    data = fetch_unresolved_comments(owner, repo, pr_number, args.comment_limit, token)
+    unresolved_comments = filter_unresolved_comments(data)
+
+    if unresolved_comments:
+        issue_body = ""
+        for comment in unresolved_comments:
+            issue_body += f"- **Author**: {comment['author']}\n"
+            issue_body += f"- **File Path**: {comment['file_path']}\n"
+            issue_body += f"- **Created At**: {comment['created_at']}\n"
+            issue_body += f"- **Comment**: {comment['body']}\n"
+            issue_body += f"  [View in GitHub]({comment['url']})\n"
+            issue_body += "____________\n\n"
+
+        title = f"Unresolved comments from PR #{pr_number}"
+
+        if args.create_issue and token:
+            create_github_issue(f"{owner}/{repo}", title, issue_body, labels=['unresolved'], token=token)
+        else:
+            print(f"Issue Title: {title}\n")
+            print(f"Issue Body:\n{issue_body}\n")
+    else:
+        print("No unresolved comments found.")
+
+
+if __name__ == '__main__':
+    main()
