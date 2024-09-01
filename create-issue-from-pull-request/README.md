@@ -1,3 +1,22 @@
+# Table of Contents
+
+1. [Overview](#create-issue-from-pull-request)
+2. [Usage](#usage)
+   - [Basic Usage](#basic-usage)
+   - [Create a GitHub Issue with Unresolved Comments](#create-a-github-issue-with-unresolved-comments)
+   - [Using Environment Variables for the Token](#using-environment-variables-for-the-token)
+   - [Retrieve More Comments](#retrieve-more-comments)
+3. [How to Create a GitHub Token](#how-to-create-a-github-token)
+4. [Requirements](#requirements)
+5. [Arguments](#arguments)
+6. [Example Commands](#example-commands)
+   - [Retrieve Unresolved Comments Only](#retrieve-unresolved-comments-only)
+   - [Create a GitHub Issue with Unresolved Comments](#create-a-github-issue-with-unresolved-comments)
+   - [Retrieve 200 Comments Per Review Thread](#retrieve-200-comments-per-review-thread)
+7. [Notes](#notes)
+8. [Example](#example)
+9. [License](#license)
+
 # Create Issue from Pull Request
 
 This script retrieves unresolved review comments from a GitHub pull request and optionally creates a GitHub issue with those comments.
