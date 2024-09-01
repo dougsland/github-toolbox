@@ -106,6 +106,60 @@ pip install requests
 - If you do not provide a GitHub token, you may quickly hit API rate limits.
 - The default number of comments retrieved per review thread is 100, but this can be adjusted with the `--comment-limit` parameter.
 
+
+## Example
+
+First of all, why use such tool? Merge early, merge often. Also, helps unblock people and continue work in a new issue.
+
+Let's assume user created a **read-only token** so it's possible to read all comments unresolved for copy, paste and edit in a new issue. For users with permission to create **read AND write token** in the repostiry it's possible to automate it via command line option from the tool.
+
+```bash
+pip install requests
+
+git clone https://github.com/dougsland/github-toolbox/
+cd github-toolbox/create-issue-from-pull-request
+
+$ export GITHUB_TOKEN="github_foo_bar_123FERerfQQRQ#4rrWQER#"
+$ ./create-issue-from-pull-request "https://github.com/containers/qm/pull/518"
+Issue Title: Unresolved comments from PR #518
+
+Issue Body:
+- **Author**: dougsland
+- **File Path**: tests/e2e/lib/diskutils
+- **Created At**: 2024-08-31T11:49:58Z
+- **Comment**: looks like out of indent
+  [View in GitHub](https://github.com/containers/qm/pull/518#discussion_r1739703990)
+____________
+
+- **Author**: dougsland
+- **File Path**: tests/e2e/lib/diskutils
+- **Created At**: 2024-08-31T11:51:06Z
+- **Comment**: if_error_exit?
+  [View in GitHub](https://github.com/containers/qm/pull/518#discussion_r1739704101)
+____________
+
+- **Author**: dougsland
+- **File Path**: tests/e2e/lib/diskutils
+- **Created At**: 2024-08-31T11:51:44Z
+- **Comment**: if_error_exit?  if not, better comment.
+  [View in GitHub](https://github.com/containers/qm/pull/518#discussion_r1739704156)
+____________
+
+- **Author**: dougsland
+- **File Path**: tests/e2e/lib/diskutils
+- **Created At**: 2024-08-31T11:52:16Z
+- **Comment**: if_error_exit? or just warning? or just echo before ?
+  [View in GitHub](https://github.com/containers/qm/pull/518#discussion_r1739704208)
+____________
+
+- **Author**: dougsland
+- **File Path**: tests/e2e/set-ffi-env-e2e
+- **Created At**: 2024-08-31T11:52:45Z
+- **Comment**: if_error_exit?
+  [View in GitHub](https://github.com/containers/qm/pull/518#discussion_r1739704278)
+____________
+
+```
 ## License
 
 This project is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for more details.
