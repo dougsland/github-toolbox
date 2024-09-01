@@ -128,7 +128,7 @@ pip install requests
 
 ## Example
 
-First of all, why use such tool? Merge early, merge often. Also, helps unblock people and continue work in a new issue.
+First of all, why use such tool? Merge early, merge often. Also, helps unblock people and continue work in a new issue. Basically, create a new issue in github using the **unresolved comments from a Pull Request URL**.
 
 Let's assume user created a **read-only token** so it's possible to read all comments unresolved for copy, paste and edit in a new issue. For users with permission to create **read AND write token** in the repostiry it's possible to automate it via command line option from the tool.
 
